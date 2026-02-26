@@ -1,0 +1,181 @@
+[
+  {
+    "id": "gs-001",
+    "description": "AWS privilege escalation followed by data exfiltration",
+    "logs": [
+      "{\"eventTime\": \"2026-01-10T03:00:00Z\", \"eventName\": \"ConsoleLogin\", \"userIdentity\": {\"userName\": \"dev-user\"}, \"sourceIPAddress\": \"1.2.3.4\", \"outcome\": \"Success\"}",
+      "{\"eventTime\": \"2026-01-10T03:01:00Z\", \"eventName\": \"AttachUserPolicy\", \"userIdentity\": {\"userName\": \"dev-user\"}, \"requestParameters\": {\"userName\": \"dev-user\", \"policyArn\": \"arn:aws:iam::aws:policy/AdministratorAccess\"}, \"sourceIPAddress\": \"1.2.3.4\"}",
+      "{\"eventTime\": \"2026-01-10T03:02:00Z\", \"eventName\": \"GetObject\", \"userIdentity\": {\"userName\": \"dev-user\"}, \"requestParameters\": {\"bucketName\": \"prod-secrets\", \"key\": \"api_keys.json\"}, \"sourceIPAddress\": \"1.2.3.4\"}"
+    ],
+    "expected_summary_keywords": ["AdminAccess", "privilege", "escalation", "prod-secrets", "exfil"],
+    "expected_mitre_tactics": ["T1098", "T1530", "T1078"],
+    "expected_risk_score_range": [7.0, 10.0],
+    "key_facts": ["dev-user", "1.2.3.4", "AdministratorAccess", "prod-secrets", "api_keys.json"]
+  },
+  {
+    "id": "gs-002",
+    "description": "MFA fatigue attack followed by account takeover",
+    "logs": [
+      "{\"eventTime\": \"2026-01-11T01:00:00Z\", \"eventType\": \"mfa\", \"user\": \"victim@corp.com\", \"action\": \"mfa.push\", \"outcome\": \"DENIED\", \"ipAddress\": \"5.6.7.8\"}",
+      "{\"eventTime\": \"2026-01-11T01:01:00Z\", \"eventType\": \"mfa\", \"user\": \"victim@corp.com\", \"action\": \"mfa.push\", \"outcome\": \"DENIED\", \"ipAddress\": \"5.6.7.8\"}",
+      "{\"eventTime\": \"2026-01-11T01:02:00Z\", \"eventType\": \"mfa\", \"user\": \"victim@corp.com\", \"action\": \"mfa.push\", \"outcome\": \"ACCEPTED\", \"ipAddress\": \"5.6.7.8\"}",
+      "{\"eventTime\": \"2026-01-11T01:02:30Z\", \"eventType\": \"auth\", \"user\": \"victim@corp.com\", \"action\": \"login\", \"outcome\": \"SUCCESS\", \"ipAddress\": \"5.6.7.8\", \"geo\": \"CN\"}"
+    ],
+    "expected_summary_keywords": ["mfa", "fatigue", "denied", "accepted", "5.6.7.8"],
+    "expected_mitre_tactics": ["T1621", "T1078"],
+    "expected_risk_score_range": [6.0, 10.0],
+    "key_facts": ["victim@corp.com", "5.6.7.8", "mfa.push", "DENIED", "ACCEPTED"]
+  },
+  {
+    "id": "gs-003",
+    "description": "CloudTrail logging disabled to cover tracks",
+    "logs": [
+      "{\"eventTime\": \"2026-01-12T10:00:00Z\", \"eventName\": \"DeleteTrail\", \"userIdentity\": {\"userName\": \"attacker\"}, \"requestParameters\": {\"name\": \"main-trail\"}, \"sourceIPAddress\": \"9.9.9.9\"}",
+      "{\"eventTime\": \"2026-01-12T10:01:00Z\", \"eventName\": \"StopLogging\", \"userIdentity\": {\"userName\": \"attacker\"}, \"requestParameters\": {\"name\": \"backup-trail\"}, \"sourceIPAddress\": \"9.9.9.9\"}"
+    ],
+    "expected_summary_keywords": ["trail", "logging", "disabled", "attacker"],
+    "expected_mitre_tactics": ["T1562"],
+    "expected_risk_score_range": [5.0, 10.0],
+    "key_facts": ["attacker", "9.9.9.9", "DeleteTrail", "StopLogging", "main-trail"]
+  },
+  {
+    "id": "gs-004",
+    "description": "Cryptomining via EC2 instance launch",
+    "logs": [
+      "{\"eventTime\": \"2026-01-13T05:00:00Z\", \"eventName\": \"RunInstances\", \"userIdentity\": {\"type\": \"AssumedRole\"}, \"requestParameters\": {\"instanceType\": \"c5.18xlarge\", \"maxCount\": 50, \"userData\": \"IyEvYmluL2Jhc2gKY3VybCBodHRwOi8vbWluZXIuY29tL21pbmVyLnNoIHwgYmFzaA==\"}, \"sourceIPAddress\": \"10.10.10.10\"}"
+    ],
+    "expected_summary_keywords": ["RunInstances", "c5.18xlarge", "userData", "miner"],
+    "expected_mitre_tactics": ["T1496"],
+    "expected_risk_score_range": [6.0, 10.0],
+    "key_facts": ["RunInstances", "c5.18xlarge", "50", "10.10.10.10", "userData"]
+  },
+  {
+    "id": "gs-005",
+    "description": "Email forwarding rule created for data theft",
+    "logs": [
+      "{\"eventTime\": \"2026-01-14T08:00:00Z\", \"eventType\": \"email\", \"user\": \"exec@company.com\", \"action\": \"Create inbox rule\", \"detail\": \"Forward all to hacker@protonmail.com\", \"ipAddress\": \"200.1.1.1\"}"
+    ],
+    "expected_summary_keywords": ["forward", "inbox", "rule", "protonmail", "exec@company.com"],
+    "expected_mitre_tactics": ["T1114"],
+    "expected_risk_score_range": [6.0, 10.0],
+    "key_facts": ["exec@company.com", "hacker@protonmail.com", "200.1.1.1", "inbox rule", "Forward"]
+  },
+  {
+    "id": "gs-006",
+    "description": "Ransomware: data encryption and backup deletion",
+    "logs": [
+      "{\"eventTime\": \"2026-01-15T22:00:00Z\", \"eventName\": \"Encrypt\", \"userIdentity\": {\"type\": \"AssumedRole\"}, \"requestParameters\": {\"keyId\": \"attacker-kms-key\"}, \"sourceIPAddress\": \"100.100.100.100\"}",
+      "{\"eventTime\": \"2026-01-15T22:01:00Z\", \"eventName\": \"DeleteObject\", \"userIdentity\": {\"type\": \"AssumedRole\"}, \"requestParameters\": {\"bucketName\": \"backups\", \"key\": \"latest.tar.gz\"}, \"sourceIPAddress\": \"100.100.100.100\"}",
+      "{\"eventTime\": \"2026-01-15T22:02:00Z\", \"eventName\": \"DeleteDBInstance\", \"userIdentity\": {\"type\": \"AssumedRole\"}, \"requestParameters\": {\"dBInstanceIdentifier\": \"prod-mysql\", \"skipFinalSnapshot\": true}, \"sourceIPAddress\": \"100.100.100.100\"}"
+    ],
+    "expected_summary_keywords": ["encrypt", "delete", "backup", "ransom", "prod-mysql"],
+    "expected_mitre_tactics": ["T1486", "T1485"],
+    "expected_risk_score_range": [8.0, 10.0],
+    "key_facts": ["Encrypt", "DeleteObject", "backups", "DeleteDBInstance", "prod-mysql"]
+  },
+  {
+    "id": "gs-007",
+    "description": "IAM access key created for service account backdoor",
+    "logs": [
+      "{\"eventTime\": \"2026-01-16T14:00:00Z\", \"eventName\": \"CreateAccessKey\", \"userIdentity\": {\"userName\": \"operator\"}, \"requestParameters\": {\"userName\": \"svc-account\"}, \"sourceIPAddress\": \"77.77.77.77\"}",
+      "{\"eventTime\": \"2026-01-16T14:01:00Z\", \"eventName\": \"AssumeRole\", \"userIdentity\": {\"userName\": \"svc-account\"}, \"requestParameters\": {\"roleArn\": \"arn:aws:iam::111:role/AdminRole\"}, \"sourceIPAddress\": \"77.77.77.77\"}"
+    ],
+    "expected_summary_keywords": ["CreateAccessKey", "svc-account", "AssumeRole", "AdminRole"],
+    "expected_mitre_tactics": ["T1098", "T1078"],
+    "expected_risk_score_range": [6.0, 9.0],
+    "key_facts": ["operator", "svc-account", "77.77.77.77", "CreateAccessKey", "AdminRole"]
+  },
+  {
+    "id": "gs-008",
+    "description": "S3 bucket made public (data exposure)",
+    "logs": [
+      "{\"eventTime\": \"2026-01-17T09:00:00Z\", \"eventName\": \"PutBucketPolicy\", \"userIdentity\": {\"userName\": \"devops-auto\"}, \"requestParameters\": {\"bucketName\": \"internal-docs\", \"bucketPolicy\": \"{\\\"Effect\\\":\\\"Allow\\\",\\\"Principal\\\":\\\"*\\\",\\\"Action\\\":\\\"s3:GetObject\\\"}\"}, \"sourceIPAddress\": \"50.50.50.50\"}"
+    ],
+    "expected_summary_keywords": ["PutBucketPolicy", "internal-docs", "public", "Principal", "Allow"],
+    "expected_mitre_tactics": ["T1530"],
+    "expected_risk_score_range": [5.0, 9.0],
+    "key_facts": ["devops-auto", "internal-docs", "PutBucketPolicy", "50.50.50.50", "Principal"]
+  },
+  {
+    "id": "gs-009",
+    "description": "Brute force password spray across multiple accounts",
+    "logs": [
+      "{\"eventTime\": \"2026-01-18T03:00:00Z\", \"eventType\": \"auth\", \"user\": \"user1@corp.com\", \"outcome\": \"FAILURE\", \"ipAddress\": \"22.22.22.22\"}",
+      "{\"eventTime\": \"2026-01-18T03:00:05Z\", \"eventType\": \"auth\", \"user\": \"user2@corp.com\", \"outcome\": \"FAILURE\", \"ipAddress\": \"22.22.22.22\"}",
+      "{\"eventTime\": \"2026-01-18T03:00:10Z\", \"eventType\": \"auth\", \"user\": \"user3@corp.com\", \"outcome\": \"FAILURE\", \"ipAddress\": \"22.22.22.22\"}",
+      "{\"eventTime\": \"2026-01-18T03:00:15Z\", \"eventType\": \"auth\", \"user\": \"admin@corp.com\", \"outcome\": \"SUCCESS\", \"ipAddress\": \"22.22.22.22\"}"
+    ],
+    "expected_summary_keywords": ["brute", "spray", "FAILURE", "22.22.22.22", "admin"],
+    "expected_mitre_tactics": ["T1110"],
+    "expected_risk_score_range": [5.0, 9.0],
+    "key_facts": ["22.22.22.22", "FAILURE", "admin@corp.com", "SUCCESS", "password spray"]
+  },
+  {
+    "id": "gs-010",
+    "description": "New IAM user with admin policy created",
+    "logs": [
+      "{\"eventTime\": \"2026-01-19T11:00:00Z\", \"eventName\": \"CreateUser\", \"userIdentity\": {\"userName\": \"root\"}, \"requestParameters\": {\"userName\": \"backup-admin-new\"}, \"sourceIPAddress\": \"33.33.33.33\"}",
+      "{\"eventTime\": \"2026-01-19T11:01:00Z\", \"eventName\": \"AttachUserPolicy\", \"userIdentity\": {\"userName\": \"root\"}, \"requestParameters\": {\"userName\": \"backup-admin-new\", \"policyArn\": \"arn:aws:iam::aws:policy/AdministratorAccess\"}, \"sourceIPAddress\": \"33.33.33.33\"}"
+    ],
+    "expected_summary_keywords": ["CreateUser", "backup-admin-new", "AdministratorAccess", "33.33.33.33"],
+    "expected_mitre_tactics": ["T1136", "T1098"],
+    "expected_risk_score_range": [6.0, 9.0],
+    "key_facts": ["root", "backup-admin-new", "33.33.33.33", "CreateUser", "AdministratorAccess"]
+  },
+  {
+    "id": "gs-011",
+    "description": "Cross-account role assumption from unknown IP",
+    "logs": [
+      "{\"eventTime\": \"2026-01-20T16:00:00Z\", \"eventName\": \"AssumeRole\", \"userIdentity\": {\"userName\": \"ci-deploy\"}, \"requestParameters\": {\"roleArn\": \"arn:aws:iam::999999999999:role/CrossAccountAdmin\"}, \"sourceIPAddress\": \"44.44.44.44\"}",
+      "{\"eventTime\": \"2026-01-20T16:01:00Z\", \"eventName\": \"ListBuckets\", \"userIdentity\": {\"type\": \"AssumedRole\", \"arn\": \"arn:aws:sts::999999999999:assumed-role/CrossAccountAdmin\"}, \"sourceIPAddress\": \"44.44.44.44\"}"
+    ],
+    "expected_summary_keywords": ["AssumeRole", "CrossAccountAdmin", "ci-deploy", "44.44.44.44"],
+    "expected_mitre_tactics": ["T1078", "T1580"],
+    "expected_risk_score_range": [5.0, 9.0],
+    "key_facts": ["ci-deploy", "44.44.44.44", "CrossAccountAdmin", "999999999999", "ListBuckets"]
+  },
+  {
+    "id": "gs-012",
+    "description": "OAuth malicious app consent granted",
+    "logs": [
+      "{\"eventTime\": \"2026-01-21T12:00:00Z\", \"eventType\": \"directory\", \"user\": \"exec@org.com\", \"action\": \"Consent to application\", \"target\": \"MaliciousApp\", \"detail\": \"Mail.ReadWrite Files.ReadWrite\", \"ipAddress\": \"55.55.55.55\"}"
+    ],
+    "expected_summary_keywords": ["consent", "MaliciousApp", "Mail.ReadWrite", "OAuth"],
+    "expected_mitre_tactics": ["T1550", "T1114"],
+    "expected_risk_score_range": [6.0, 9.0],
+    "key_facts": ["exec@org.com", "55.55.55.55", "MaliciousApp", "Mail.ReadWrite", "Consent"]
+  },
+  {
+    "id": "gs-013",
+    "description": "Low severity: normal business hours S3 read access",
+    "logs": [
+      "{\"eventTime\": \"2026-01-22T09:30:00Z\", \"eventName\": \"GetObject\", \"userIdentity\": {\"userName\": \"reporting-svc\"}, \"requestParameters\": {\"bucketName\": \"reports-archive\", \"key\": \"q4-2025.pdf\"}, \"sourceIPAddress\": \"10.0.0.100\"}"
+    ],
+    "expected_summary_keywords": ["GetObject", "reporting-svc", "reports-archive"],
+    "expected_mitre_tactics": [],
+    "expected_risk_score_range": [0.0, 3.0],
+    "key_facts": ["reporting-svc", "10.0.0.100", "reports-archive", "q4-2025.pdf"]
+  },
+  {
+    "id": "gs-014",
+    "description": "Billing alarm disabled (defense evasion)",
+    "logs": [
+      "{\"eventTime\": \"2026-01-23T20:00:00Z\", \"eventName\": \"PutMetricAlarm\", \"userIdentity\": {\"type\": \"AssumedRole\"}, \"requestParameters\": {\"alarmName\": \"billing-threshold\", \"actionsEnabled\": false}, \"sourceIPAddress\": \"66.66.66.66\"}"
+    ],
+    "expected_summary_keywords": ["PutMetricAlarm", "billing", "disabled", "66.66.66.66"],
+    "expected_mitre_tactics": ["T1562"],
+    "expected_risk_score_range": [4.0, 8.0],
+    "key_facts": ["PutMetricAlarm", "billing-threshold", "actionsEnabled", "false", "66.66.66.66"]
+  },
+  {
+    "id": "gs-015",
+    "description": "VPC security group opened to 0.0.0.0/0",
+    "logs": [
+      "{\"eventTime\": \"2026-01-24T07:00:00Z\", \"eventName\": \"AuthorizeSecurityGroupIngress\", \"userIdentity\": {\"userName\": \"netops\"}, \"requestParameters\": {\"groupId\": \"sg-prod-web\", \"ipPermissions\": [{\"ipProtocol\": \"-1\", \"ipRanges\": [{\"cidrIp\": \"0.0.0.0/0\"}]}]}, \"sourceIPAddress\": \"172.16.0.1\"}"
+    ],
+    "expected_summary_keywords": ["AuthorizeSecurityGroupIngress", "0.0.0.0/0", "sg-prod-web", "netops"],
+    "expected_mitre_tactics": ["T1562"],
+    "expected_risk_score_range": [4.0, 8.0],
+    "key_facts": ["netops", "sg-prod-web", "0.0.0.0/0", "172.16.0.1", "AuthorizeSecurityGroupIngress"]
+  }
+]

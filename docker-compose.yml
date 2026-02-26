@@ -1,0 +1,161 @@
+services:
+  # Shared pgvector DB (used by raggy + cdrmind)
+  db:
+    image: pgvector/pgvector:pg15
+    container_name: cdrmind-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cdrmind
+      POSTGRES_PASSWORD: cdrmind
+      POSTGRES_DB: cdrmind
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cdrmind -d cdrmind"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  # Dedicated DB for taskonaut-soc
+  taskonaut-db:
+    image: postgres:15-alpine
+    container_name: cdrmind-taskonaut-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: taskrunner
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d taskrunner"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - taskonaut_db_data:/var/lib/postgresql/data
+
+  # Redis for rate limiting
+  redis:
+    image: redis:7-alpine
+    container_name: cdrmind-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # raggy RAG backend
+  raggy:
+    build:
+      context: ${RAGGY_SRC:-../raggy}
+      dockerfile: Dockerfile
+    container_name: cdrmind-raggy
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://cdrmind:cdrmind@db:5432/raggy
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+    ports:
+      - "8001:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # taskonaut-soc LangGraph task runner
+  taskonaut-soc:
+    build:
+      context: ${TASKONAUT_SOC_SRC:-../taskonaut-soc}
+      dockerfile: Dockerfile
+    container_name: cdrmind-taskonaut-soc
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@taskonaut-db:5432/taskrunner
+      CDRMIND_URL: http://cdrmind:8000
+      TASKRUNNER_MAX_INPUT_BYTES: "1048576"
+      TASKRUNNER_TOOL_TIMEOUT_SECS: "120.0"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+    ports:
+      - "8002:8002"
+    depends_on:
+      taskonaut-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8002/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # guardflow policy enforcement
+  guardflow:
+    build:
+      context: ${GUARDFLOW_SRC:-../guardflow}
+      dockerfile: Dockerfile
+    container_name: cdrmind-guardflow
+    restart: unless-stopped
+    ports:
+      - "8003:8003"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8003/health')\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # cdrmind SOC Copilot (orchestrator)
+  cdrmind:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cdrmind-api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://cdrmind:cdrmind@db:5432/cdrmind
+      RAGGY_URL: http://raggy:8001
+      TASKONAUT_URL: http://taskonaut-soc:8002
+      GUARDFLOW_URL: http://guardflow:8003
+      REDIS_URL: redis://redis:6379
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      LOG_LEVEL: INFO
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      raggy:
+        condition: service_healthy
+      taskonaut-soc:
+        condition: service_healthy
+      guardflow:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # Jaeger distributed tracing
+  jaeger:
+    image: jaegertracing/all-in-one:1.62.0
+    container_name: cdrmind-jaeger
+    restart: unless-stopped
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "4317:4317"    # OTLP gRPC
+      - "4318:4318"    # OTLP HTTP
+
+volumes:
+  db_data:
+  taskonaut_db_data:
