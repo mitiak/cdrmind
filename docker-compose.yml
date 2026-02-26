@@ -123,7 +123,8 @@ services:
       TASKONAUT_URL: http://taskonaut-soc:8002
       GUARDFLOW_URL: http://guardflow:8003
       REDIS_URL: redis://redis:6379
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      LLM_MODEL: ${LLM_MODEL:-meta-llama/llama-3.3-70b-instruct:free}
       LOG_LEVEL: INFO
     ports:
       - "8000:8000"

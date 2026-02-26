@@ -6,9 +6,9 @@ Production-grade Security Operations Center (SOC) Copilot that orchestrates thre
 
 ```
 POST /incidents → cdrmind → taskonaut-soc (soc_pipeline)
-                              ├── summarize → /agents/summarize (Claude)
-                              ├── classify  → /agents/classify  (guardflow + raggy + Claude)
-                              └── report    → /agents/report    (guardflow + Claude)
+                              ├── summarize → /agents/summarize (LLM via OpenRouter)
+                              ├── classify  → /agents/classify  (guardflow + raggy + LLM)
+                              └── report    → /agents/report    (guardflow + LLM)
 ```
 
 See [docs/architecture.md](docs/architecture.md) for full diagram.
@@ -16,26 +16,46 @@ See [docs/architecture.md](docs/architecture.md) for full diagram.
 ## Quick Start
 
 ```bash
-# Copy environment config
+# Copy environment config and add your OpenRouter key
 cp .env.example .env
-# Add your ANTHROPIC_API_KEY to .env
+# Edit .env — set OPENROUTER_API_KEY and optionally LLM_MODEL
 
 # Start full stack
-docker-compose up -d
+make up
 
 # Wait for services to be healthy, then ingest MITRE data
 docker-compose exec cdrmind python scripts/ingest_mitre.py
 
 # Run an investigation
-curl -X POST http://localhost:8000/incidents \
-  -H "Content-Type: application/json" \
-  -d @data/logs/aws_cloudtrail.json
+make incident
 
-# Check the report
-curl http://localhost:8000/incidents/{id}
+# Stream logs while the pipeline runs
+make logs
 
 # View traces
 open http://localhost:16686
+```
+
+## Switching Models
+
+**Single config point: `LLM_MODEL` in `.env`**
+
+1. Edit `.env` and change `LLM_MODEL` to any [free model on OpenRouter](https://openrouter.ai/models?q=:free):
+   ```
+   LLM_MODEL=google/gemma-3-12b-it:free
+   ```
+2. Apply without rebuilding:
+   ```bash
+   make restart
+   ```
+3. Fire a test request:
+   ```bash
+   make incident
+   ```
+
+Code changes (e.g. in `app/`) require a full rebuild instead:
+```bash
+make rebuild
 ```
 
 ## Development

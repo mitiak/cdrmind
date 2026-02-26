@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-import anthropic
+import openai
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from app.core.config import get_settings
@@ -12,9 +12,12 @@ from app.core.logging import get_logger
 logger = get_logger(__name__)
 
 
-def get_client() -> anthropic.AsyncAnthropic:
+def get_client() -> openai.AsyncOpenAI:
     settings = get_settings()
-    return anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+    return openai.AsyncOpenAI(
+        api_key=settings.openrouter_api_key,
+        base_url=settings.openrouter_base_url,
+    )
 
 
 @retry(
@@ -35,18 +38,16 @@ async def complete(
         max_tokens = settings.llm_max_tokens
 
     logger.info("llm.complete.started", model=settings.llm_model, prompt_len=len(prompt))
-    message = await client.messages.create(
+    resp = await client.chat.completions.create(
         model=settings.llm_model,
+        messages=[
+            {"role": "system", "content": system},
+            {"role": "user", "content": prompt},
+        ],
         max_tokens=max_tokens,
         temperature=temperature,
-        system=system,
-        messages=[{"role": "user", "content": prompt}],
     )
-    content = message.content[0]
-    if hasattr(content, "text"):
-        result: str = content.text
-    else:
-        result = str(content)
+    result = resp.choices[0].message.content or ""
     logger.info("llm.complete.done", output_len=len(result))
     return result
 

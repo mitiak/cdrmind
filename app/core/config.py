@@ -14,9 +14,10 @@ class Settings(BaseSettings):
     taskonaut_url: str = "http://taskonaut-soc:8002"
     guardflow_url: str = "http://guardflow:8003"
 
-    # Anthropic
-    anthropic_api_key: str = ""
-    llm_model: str = "claude-haiku-4-5-20251001"
+    # OpenRouter
+    openrouter_api_key: str = ""
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    llm_model: str = "meta-llama/llama-3.3-70b-instruct:free"
     llm_max_tokens: int = 4096
 
     # Rate limiting
