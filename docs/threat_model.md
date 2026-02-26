@@ -86,4 +86,4 @@
 **Mitigations**:
 - Rate limiting prevents bulk enumeration
 - System prompts are hardcoded in agent modules (not DB-driven)
-- ANTHROPIC_API_KEY not logged or exposed in responses
+- OPENROUTER_API_KEY not logged or exposed in responses

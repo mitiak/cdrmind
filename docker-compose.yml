@@ -59,7 +59,6 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql+asyncpg://cdrmind:cdrmind@db:5432/raggy
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
     ports:
       - "8001:8000"
     depends_on:
