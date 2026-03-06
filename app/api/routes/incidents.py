@@ -6,10 +6,12 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.agents import quick_analyst
 from app.core.logging import get_logger
 from app.db.session import get_db
 from app.models.incident import Incident
@@ -50,19 +52,28 @@ async def create_incident(
             session_id=session_id,
             actor_id=payload.actor_id,
             actor_role=payload.actor_role,
-            max_steps=6,
+            max_steps=12,
         )
+    except (httpx.TimeoutException, TimeoutError) as exc:
+        error_msg = repr(exc) if not str(exc) else str(exc)
+        logger.error("incidents.create.task_failed", session_id=session_id, error=error_msg)
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail=f"Pipeline timed out: {error_msg}",
+        ) from exc
     except Exception as exc:
-        logger.error("incidents.create.task_failed", session_id=session_id, error=str(exc))
+        error_msg = repr(exc) if not str(exc) else str(exc)
+        logger.error("incidents.create.task_failed", session_id=session_id, error=error_msg)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Pipeline execution failed: {exc}",
+            detail=f"Pipeline execution failed: {error_msg}",
         ) from exc
 
     if task_result.get("status") != "COMPLETED":
+        task_error = task_result.get("error") or task_result.get("status", "UNKNOWN")
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Pipeline task did not complete: {task_result.get('status')}",
+            detail=f"Pipeline task did not complete: {task_error}",
         )
 
     # Extract report from task output payload
@@ -113,6 +124,64 @@ async def create_incident(
     return report
 
 
+@router.post("/quick", response_model=IncidentReport, status_code=status.HTTP_201_CREATED)
+async def create_incident_quick(
+    payload: LogBatch,
+    db: AsyncSession = Depends(get_db),
+) -> IncidentReport:
+    session_id = str(payload.session_id)
+    raw_logs = [json.dumps(e) for e in payload.events]
+
+    logger.info(
+        "incidents.quick.started",
+        session_id=session_id,
+        source=payload.source,
+        actor=payload.actor_id,
+        events=len(raw_logs),
+    )
+
+    try:
+        report = await quick_analyst.run_quick_analysis(raw_logs, session_id)
+    except Exception as exc:
+        logger.error("incidents.quick.failed", session_id=session_id, error=str(exc))
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Quick analysis failed: {exc}",
+        ) from exc
+
+    incident = Incident(
+        id=report.id,
+        session_id=payload.session_id,
+        actor_id=payload.actor_id,
+        actor_role=payload.actor_role,
+        source=payload.source,
+        risk_score=report.risk_score,
+        summary=report.summary,
+        report_json=report.model_dump(mode="json"),
+        task_id="",
+    )
+    db.add(incident)
+
+    await write_audit(
+        db,
+        session_id=session_id,
+        actor_id=payload.actor_id,
+        step="create_incident_quick",
+        input_data=json.dumps({"source": payload.source, "events": len(raw_logs)}),
+        output_data=json.dumps({"risk_score": report.risk_score, "tactics": len(report.mitre_tactics)}),
+        incident_id=report.id,
+    )
+    await db.commit()
+
+    logger.info(
+        "incidents.quick.completed",
+        incident_id=str(report.id),
+        risk_score=report.risk_score,
+        tactics=len(report.mitre_tactics),
+    )
+    return report
+
+
 @router.get("/{incident_id}", response_model=IncidentReport)
 async def get_incident(incident_id: UUID, db: AsyncSession = Depends(get_db)) -> IncidentReport:
     stmt = select(Incident).where(Incident.id == incident_id)
@@ -125,16 +194,17 @@ async def get_incident(incident_id: UUID, db: AsyncSession = Depends(get_db)) ->
 
 def _extract_report(output: dict[str, Any]) -> dict[str, Any]:
     """Extract IncidentReport data from taskonaut task output_payload."""
-    # taskonaut output_payload is {step_name: step_output_payload}
-    report_step = output.get("report")
+    # taskonaut output_payload is {step_name: SocAgentResponse-like dict}
+    # Primary: look for the incident_reporter step by its exact node name
+    report_step = output.get("incident_reporter")
     if isinstance(report_step, dict):
         result = report_step.get("result", report_step)
         if isinstance(result, dict):
             return result
-    # Fallback: try to find any dict with 'summary' key
+    # Fallback: find any step whose nested "result" (or top-level) has "summary"
     for val in output.values():
-        if isinstance(val, dict) and "summary" in val:
-            r = val.get("result", val)
-            if isinstance(r, dict):
-                return r
+        if isinstance(val, dict):
+            candidate = val.get("result", val)
+            if isinstance(candidate, dict) and "summary" in candidate:
+                return candidate
     return {}

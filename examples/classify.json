@@ -1,0 +1,63 @@
+{
+  "threat_indicators": [
+    {
+      "indicator": "AssumedRole with OrganizationAccountAccessRole to gain elevated privileges.",
+      "confidence": 0.9,
+      "evidence": "The logs show multiple AWS API calls made by an assumed role 'OrganizationAccountAccessRole'."
+    },
+    {
+      "indicator": "Exfiltration of sensitive data from S3 bucket prod-customer-data.",
+      "confidence": 0.85,
+      "evidence": "GetObject event on the key 'exports/users_2026.csv' in the S3 bucket 'prod-customer-data'."
+    },
+    {
+      "indicator": "Creation of a VPC and Security Group to establish network infrastructure.",
+      "confidence": 0.85,
+      "evidence": "CreateVpc and AuthorizeSecurityGroupIngress events."
+    },
+    {
+      "indicator": "Encryption of data using KMS key 'attacker-key'.",
+      "confidence": 0.9,
+      "evidence": "Encrypt event with the keyId 'arn:aws:kms:us-east-1:123456789012:key/attacker-key'."
+    },
+    {
+      "indicator": "Deletion of backup snapshot and database instance.",
+      "confidence": 0.8,
+      "evidence": "DeleteObject and DeleteDBInstance events."
+    }
+  ],
+  "mitre_tactics": [
+    {
+      "id": "T1078",
+      "name": "Valid Accounts",
+      "description": "The use of an assumed role with 'OrganizationAccountAccessRole' suggests the attacker has obtained valid credentials, which is a common tactic in initial access."
+    },
+    {
+      "id": "T1041",
+      "name": "Exfiltration Over Network",
+      "description": "The GetObject event indicates data exfiltration over the network, as sensitive data was accessed from an S3 bucket."
+    },
+    {
+      "id": "T1090",
+      "name": "Lateral Movement",
+      "description": "Creating a VPC and Security Group could be part of establishing a foothold for further lateral movement within the network."
+    },
+    {
+      "id": "T1562",
+      "name": "Data Encrypted for Impact",
+      "description": "The Encrypt event with sensitive data suggests an attempt to render data unusable, which is a tactic aimed at causing impact and extortion."
+    }
+  ],
+  "risk_score": 8.0,
+  "rag_context": [
+    {
+      "title": "AWS Security Best Practices",
+      "relevance": "The use of assumed roles with high privileges highlights the importance of strict access controls and least privilege principles in AWS environments."
+    },
+    {
+      "title": "Data Exfiltration Prevention Strategies",
+      "relevance": "The exfiltration attempt from S3 bucket indicates the need for robust data protection measures, including monitoring and encryption."
+    }
+  ],
+  "reasoning": "This incident involves multiple high-risk activities such as privilege escalation via assumed roles, data exfiltration, network infrastructure establishment, and data encryption. These actions align with common tactics used by advanced threat actors to gain initial access, maintain persistence, and cause impact. The risk score is high due to the potential for significant damage if not addressed promptly."
+}

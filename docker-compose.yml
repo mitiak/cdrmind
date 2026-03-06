@@ -122,8 +122,9 @@ services:
       TASKONAUT_URL: http://taskonaut-soc:8002
       GUARDFLOW_URL: http://guardflow:8003
       REDIS_URL: redis://redis:6379
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
-      LLM_MODEL: ${LLM_MODEL:-meta-llama/llama-3.3-70b-instruct:free}
+      LLM_API_KEY: ${LLM_API_KEY:-ollama}
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://host.docker.internal:11434/v1}
+      LLM_MODEL: ${LLM_MODEL:-qwen2.5:7b}
       LOG_LEVEL: INFO
     ports:
       - "8000:8000"

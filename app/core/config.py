@@ -14,11 +14,12 @@ class Settings(BaseSettings):
     taskonaut_url: str = "http://taskonaut-soc:8002"
     guardflow_url: str = "http://guardflow:8003"
 
-    # OpenRouter
-    openrouter_api_key: str = ""
-    openrouter_base_url: str = "https://openrouter.ai/api/v1"
-    llm_model: str = "meta-llama/llama-3.3-70b-instruct:free"
+    # LLM (defaults to local Ollama; override with env vars for OpenRouter)
+    llm_api_key: str = "ollama"
+    llm_base_url: str = "http://host.docker.internal:11434/v1"
+    llm_model: str = "qwen2.5:7b"
     llm_max_tokens: int = 4096
+    llm_timeout_secs: int = 300
 
     # Rate limiting
     redis_url: str = "redis://redis:6379"

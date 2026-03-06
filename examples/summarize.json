@@ -1,0 +1,44 @@
+{
+  "log_summary": {
+    "total_events": 15,
+    "time_range": {"start": "2026-02-25T02:14:33Z", "end": "2026-02-25T02:22:00Z"},
+    "key_entities": {
+      "users": ["admin-svc", "backup-svc"],
+      "ips": ["203.0.113.42", "185.220.101.15"],
+      "resources": ["prod-customer-data", "prod-backups", "prod-db-01"],
+      "services": ["ConsoleLogin", "ListRoles", "ListPolicies", "AttachUserPolicy", "CreateAccessKey", "AssumeRole", "ListBuckets", "GetObject", "PutBucketPolicy", "DeleteTrail", "StopLogging", "RunInstances", "CreateVpc", "AuthorizeSecurityGroupIngress", "PutMetricAlarm", "CreateKey", "Encrypt", "DeleteObject", "DeleteDBInstance", "SendMessage"]
+    },
+    "anomalies": [
+      "Multiple high-level actions performed by 'backup-svc' in a short period, including attaching policies and creating access keys.",
+      "Sensitive operations such as deleting trails and stopping logging were executed."
+    ],
+    "attack_indicators": [
+      "'backup-svc' assumed an IAM role with broad permissions and performed multiple critical actions.",
+      "Data exfiltration attempt via 'SendMessage' to a ransom queue."
+    ]
+  },
+  "timeline": [
+    {"timestamp": "2026-02-25T02:14:33Z", "event_type": "ConsoleLogin", "actor": "admin-svc", "resource": null, "description": "Admin service logged in from IP 203.0.113.42"},
+    {"timestamp": "2026-02-25T02:15:01Z", "event_type": "ListRoles", "actor": "admin-svc", "resource": null, "description": "Admin service listed roles from IP 203.0.113.42"},
+    {"timestamp": "2026-02-25T02:15:14Z", "event_type": "ListPolicies", "actor": "admin-svc", "resource": null, "description": "Admin service listed policies from IP 203.0.113.42"},
+    {"timestamp": "2026-02-25T02:15:45Z", "event_type": "AttachUserPolicy", "actor": "admin-svc", "resource": null, "description": "Admin service attached AdministratorAccess policy to backup-svc from IP 203.0.113.42"},
+    {"timestamp": "2026-02-25T02:16:02Z", "event_type": "CreateAccessKey", "actor": "admin-svc", "resource": null, "description": "Admin service created access key for backup-svc from IP 203.0.113.42"},
+    {"timestamp": "2026-02-25T02:16:30Z", "event_type": "AssumeRole", "actor": "backup-svc", "resource": null, "description": "Backup service assumed OrganizationAccountAccessRole from IP 185.220.101.15"},
+    {"timestamp": "2026-02-25T02:16:55Z", "event_type": "ListBuckets", "actor": "backup-svc", "resource": null, "description": "Backup service listed S3 buckets from IP 185.220.101.15"},
+    {"timestamp": "2026-02-25T02:17:20Z", "event_type": "GetObject", "actor": "backup-svc", "resource": "prod-customer-data", "description": "Backup service retrieved users_2026.csv from prod-customer-data bucket"},
+    {"timestamp": "2026-02-25T02:17:45Z", "event_type": "PutBucketPolicy", "actor": "backup-svc", "resource": "prod-customer-data", "description": "Backup service set public read access on prod-customer-data bucket"},
+    {"timestamp": "2026-02-25T02:18:00Z", "event_type": "DeleteTrail", "actor": "backup-svc", "resource": null, "description": "Backup service deleted mgmt-trail from IP 185.220.101.155"},
+    {"timestamp": "2026-02-25T02:18:10Z", "event_type": "StopLogging", "actor": "backup-svc", "resource": null, "description": "Backup service stopped backup-trail from IP 185.220.101.115"},
+    {"timestamp": "2026-02-25T02:18:30Z", "event_type": "RunInstances", "actor": "backup-svc", "resource": null, "description": "Backup service launched 20 c5.4xlarge instances from IP 185.220.101.111"},
+    {"timestamp": "2026-02-25T02:20:30Z", "event_type": "CreateKey", "actor": "backup-svc", "resource": null, "description": "Backup service created attacker-key from IP 185.220.101.111"},
+    {"timestamp": "2026-02-25T02:21:00Z", "event_type": "Encrypt", "actor": "backup-svc", "resource": null, "description": "Backup service encrypted data using attacker-key from IP 185.220.101.111"},
+    {"timestamp": "2026-02-25T02:21:30Z", "event_type": "DeleteObject", "actor": "backup-svc", "resource": "prod-backups/snapshot-2026-02-24.tar.gz", "description": "Backup service deleted prod-backups snapshot from IP 185.220.101.111"},
+    {"timestamp": "2026-02-25T02:22:00Z", "event_type": "SendMessage", "actor": "backup-svc", "resource": null, "description": "Backup service sent ransom message to a queue from IP 185.220.101.111"}
+  ],
+  "entities": {
+    "users": ["admin-svc", "backup-svc"],
+    "ips": ["203.0.113.42", "185.220.101.15"],
+    "resources": ["prod-customer-data", "prod-backups", "prod-db-01"]
+  },
+  "reasoning": "The log summary indicates a series of high-risk actions performed by 'backup-svc', including attaching broad IAM policies, creating access keys, and performing sensitive operations like deleting trails and stopping logging. Additionally, there is evidence of potential data exfiltration and ransomware activity."
+}

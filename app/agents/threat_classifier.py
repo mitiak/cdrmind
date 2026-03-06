@@ -72,6 +72,6 @@ async def classify_threats(request: SocAgentRequest, raggy: RaggyClient | None =
         rag_context=rag_context_text or "No relevant documents found.",
     )
 
-    result: dict[str, Any] = await llm.complete_json(prompt, system=_CLASSIFY_SYSTEM)
+    result: dict[str, Any] = await llm.complete_json(prompt, system=_CLASSIFY_SYSTEM, caller="classify")
     result["raw_citations"] = citations
     return SocAgentResponse(result=result, reasoning_step="threat_classifier")

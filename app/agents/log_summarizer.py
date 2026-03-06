@@ -37,5 +37,5 @@ Return a JSON object with:
 async def summarize_logs(request: SocAgentRequest) -> SocAgentResponse:
     logs_block = wrap_logs_for_prompt(request.raw_logs)
     prompt = _SUMMARIZE_PROMPT.format(logs_block=logs_block)
-    result: dict[str, Any] = await llm.complete_json(prompt, system=_SUMMARIZE_SYSTEM)
+    result: dict[str, Any] = await llm.complete_json(prompt, system=_SUMMARIZE_SYSTEM, caller="summarize")
     return SocAgentResponse(result=result, reasoning_step="log_summarizer")

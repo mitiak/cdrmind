@@ -43,7 +43,10 @@ class TaskoNautClient:
             return data
 
     async def run_task(self, task_id: str | UUID, max_steps: int = 12) -> dict[str, Any]:
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        settings = get_settings()
+        # Pipeline runs 3 LLM calls; give enough headroom for the slowest local model.
+        run_timeout = settings.llm_timeout_secs * 3 + 30
+        async with httpx.AsyncClient(timeout=run_timeout) as client:
             response = await client.post(
                 f"{self._base_url}/tasks/{task_id}/run",
                 json={"max_steps": max_steps},
@@ -77,14 +80,33 @@ class TaskoNautClient:
             actor_role=actor_role,
         )
         task_id = task["id"]
-        await self.run_task(task_id, max_steps=max_steps)
+
+        # Run the task; on 409 (max_steps exhausted but not yet terminal) retry up to
+        # 3 times — each call resumes from the current state so the pipeline will finish.
+        for run_attempt in range(3):
+            try:
+                await self.run_task(task_id, max_steps=max_steps)
+                break  # 200 — task reached a terminal state inside /run
+            except httpx.HTTPStatusError as exc:
+                if exc.response.status_code != 409:
+                    raise
+                logger.warning(
+                    "taskonaut.run.max_steps_exceeded",
+                    task_id=task_id,
+                    attempt=run_attempt,
+                )
+                # Taskonaut may have transitioned to COMPLETED on the very last step
+                snap = await self.get_task(task_id)
+                if snap.get("status") in ("COMPLETED", "FAILED"):
+                    return snap
+                # Non-terminal — loop to call /run again
 
         for attempt in range(self._poll_max):
             await asyncio.sleep(self._poll_interval)
-            task = await self.get_task(task_id)
-            status = task.get("status", "")
+            task_data = await self.get_task(task_id)
+            status = task_data.get("status", "")
             logger.info("taskonaut.poll", task_id=task_id, status=status, attempt=attempt)
             if status in ("COMPLETED", "FAILED"):
-                return task
+                return task_data
 
         raise TimeoutError(f"Task {task_id} did not complete in {self._poll_max} polls")

@@ -74,7 +74,7 @@ async def generate_report(request: SocAgentRequest) -> SocAgentResponse:
         log_summary=json.dumps(log_summary, indent=2),
         classification=json.dumps({k: v for k, v in classification.items() if k != "raw_citations"}, indent=2),
     )
-    llm_result: dict[str, Any] = await llm.complete_json(prompt, system=_REPORT_SYSTEM)
+    llm_result: dict[str, Any] = await llm.complete_json(prompt, system=_REPORT_SYSTEM, caller="report")
 
     # Build IncidentReport with strict validation
     try:
@@ -84,12 +84,12 @@ async def generate_report(request: SocAgentRequest) -> SocAgentResponse:
             created_at=datetime.now(tz=timezone.utc),
             timeline=[
                 TimelineEvent(
-                    timestamp=t.get("timestamp", ""),
-                    event_type=t.get("event_type", "unknown"),
-                    actor=t.get("actor", "unknown"),
-                    resource=t.get("resource", ""),
-                    description=t.get("description", ""),
-                    raw=t.get("raw", {}),
+                    timestamp=t.get("timestamp") or "",
+                    event_type=t.get("event_type") or "unknown",
+                    actor=t.get("actor") or "unknown",
+                    resource=t.get("resource") or "",
+                    description=t.get("description") or "",
+                    raw=t.get("raw") or {},
                 )
                 for t in llm_result.get("timeline", [])
             ],
@@ -97,9 +97,9 @@ async def generate_report(request: SocAgentRequest) -> SocAgentResponse:
             evidence_citations=_build_citations(raw_citations, request.session_id),
             mitre_tactics=[
                 MitreTactic(
-                    id=m.get("id", "T0000"),
-                    name=m.get("name", "Unknown"),
-                    description=m.get("description", ""),
+                    id=m.get("id") or "T0000",
+                    name=m.get("name") or "Unknown",
+                    description=m.get("description") or "",
                 )
                 for m in llm_result.get("mitre_tactics", [])
             ],
@@ -107,9 +107,9 @@ async def generate_report(request: SocAgentRequest) -> SocAgentResponse:
             recommended_actions=llm_result.get("recommended_actions", []),
             reasoning_chain=[
                 ReasoningStep(
-                    step=r.get("step", ""),
-                    reasoning=r.get("reasoning", ""),
-                    output_summary=r.get("output_summary", ""),
+                    step=r.get("step") or "",
+                    reasoning=r.get("reasoning") or "",
+                    output_summary=r.get("output_summary") or "",
                 )
                 for r in llm_result.get("reasoning_chain", [])
             ],

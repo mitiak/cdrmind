@@ -1,0 +1,187 @@
+{
+  "timeline": [
+    {
+      "timestamp": "2026-02-25T02:14:33Z",
+      "event_type": "ConsoleLogin",
+      "actor": "admin-svc",
+      "resource": null,
+      "description": "Admin service logged in from IP 203.0.113.42",
+      "raw": {}
+    },
+    {
+      "timestamp": "2026-02-25T02:15:01Z",
+      "event_type": "ListRoles",
+      "actor": "admin-svc",
+      "resource": null,
+      "description": "Admin service listed roles from IP 203.0.113.42",
+      "raw": {}
+    },
+    {
+      "timestamp": "2026-02-25T02:15:14Z",
+      "event_type": "ListPolicies",
+      "actor": "admin-svc",
+      "resource": null,
+      "description": "Admin service listed policies from IP 203.0.113.42",
+      "raw": {}
+    },
+    {
+      "timestamp": "2026-02-25T02:15:45Z",
+      "event_type": "AttachUserPolicy",
+      "actor": "admin-svc",
+      "resource": null,
+      "description": "Admin service attached AdministratorAccess policy to backup-svc from IP 203.0.113.42",
+      "raw": {}
+    },
+    {
+      "timestamp": "2026-02-25T02:16:02Z",
+      "event_type": "CreateAccessKey",
+      "actor": "admin-svc",
+      "resource": null,
+      "description": "Admin service created access key for backup-svc from IP 203.0.113.42",
+      "raw": {}
+    },
+    {
+      "timestamp": "2026-02-25T02:16:30Z",
+      "event_type": "AssumeRole",
+      "actor": "backup-svc",
+      "resource": null,
+      "description": "Backup service assumed OrganizationAccountAccessRole from IP 185.220.101.15",
+      "raw": {}
+    },
+    {
+      "timestamp": "2026-02-25T02:16:55Z",
+      "event_type": "ListBuckets",
+      "actor": "backup-svc",
+      "resource": null,
+      "description": "Backup service listed S3 buckets from IP 185.220.101.15",
+      "raw": {}
+    },
+    {
+      "timestamp": "2026-02-25T02:17:20Z",
+      "event_type": "GetObject",
+      "actor": "backup-svc",
+      "resource": "prod-customer-data",
+      "description": "Backup service retrieved users_2026.csv from prod-customer-data bucket",
+      "raw": {}
+    },
+    {
+      "timestamp": "2026-02-25T02:17:45Z",
+      "event_type": "PutBucketPolicy",
+      "actor": "backup-svc",
+      "resource": "prod-customer-data",
+      "description": "Backup service set public read access on prod-customer-data bucket",
+      "raw": {}
+    },
+    {
+      "timestamp": "2026-02-25T02:18:00Z",
+      "event_type": "DeleteTrail",
+      "actor": "backup-svc",
+      "resource": null,
+      "description": "Backup service deleted mgmt-trail from IP 185.220.101.155",
+      "raw": {}
+    },
+    {
+      "timestamp": "2026-02-25T02:18:10Z",
+      "event_type": "StopLogging",
+      "actor": "backup-svc",
+      "resource": null,
+      "description": "Backup service stopped backup-trail from IP 185.220.101.115",
+      "raw": {}
+    },
+    {
+      "timestamp": "2026-02-25T02:18:30Z",
+      "event_type": "RunInstances",
+      "actor": "backup-svc",
+      "resource": null,
+      "description": "Backup service launched 20 c5.4xlarge instances from IP 185.220.101.111",
+      "raw": {}
+    },
+    {
+      "timestamp": "2026-02-25T02:20:30Z",
+      "event_type": "CreateKey",
+      "actor": "backup-svc",
+      "resource": null,
+      "description": "Backup service created attacker-key from IP 185.220.101.111",
+      "raw": {}
+    },
+    {
+      "timestamp": "2026-02-25T02:21:00Z",
+      "event_type": "Encrypt",
+      "actor": "backup-svc",
+      "resource": null,
+      "description": "Backup service encrypted data using attacker-key from IP 185.220.101.111",
+      "raw": {}
+    },
+    {
+      "timestamp": "2026-02-25T02:21:30Z",
+      "event_type": "DeleteObject",
+      "actor": "backup-svc",
+      "resource": "prod-customer-data",
+      "description": "Backup service deleted object from prod-customer-data bucket",
+      "raw": {}
+    },
+    {
+      "timestamp": "2026-02-25T02:21:30Z",
+      "event_type": "DeleteDBInstance",
+      "actor": "backup-svc",
+      "resource": null,
+      "description": "Backup service deleted database instance",
+      "raw": {}
+    },
+    {
+      "timestamp": "2026-02-25T02:21:30Z",
+      "event_type": "SendEmail",
+      "actor": "backup-svc",
+      "resource": null,
+      "description": "Backup service sent email with ransom note to admin",
+      "raw": {}
+    }
+  ],
+  "risk_score": 8.5,
+  "mitre_tactics": [
+    {
+      "id": "T1078",
+      "name": "Valid Accounts",
+      "description": "The use of an assumed role with 'OrganizationAccountAccessRole' suggests the attacker has obtained valid credentials, which is a common tactic in initial access."
+    },
+    {
+      "id": "T1041",
+      "name": "Exfiltration Over Network",
+      "description": "The GetObject event indicates data exfiltration over the network, as sensitive data was accessed from an S3 bucket."
+    },
+    {
+      "id": "T1562",
+      "name": "Data Encrypted for Impact",
+      "description": "The Encrypt event with sensitive data suggests an attempt to render data unusable, which is a tactic aimed at causing impact and extortion."
+    }
+  ],
+  "summary": "An attacker gained access through the 'OrganizationAccountAccessRole' and exfiltrated sensitive data from S3 buckets. They also encrypted some data and deleted backups.",
+  "recommended_actions": [
+    "Isolate affected AWS accounts",
+    "Revise IAM policies to remove unnecessary permissions",
+    "Implement multi-factor authentication for all services",
+    "Review and strengthen network security measures"
+  ],
+  "reasoning_chain": [
+    {
+      "step": "Initial Access",
+      "reasoning": "Admin service logged in with valid credentials, likely obtained through social engineering or other means.",
+      "output_summary": "Valid account access was used."
+    },
+    {
+      "step": "Privilege Escalation",
+      "reasoning": "Administrator privileges were escalated by attaching the AdministratorAccess policy to a user.",
+      "output_summary": "Elevated privileges were obtained."
+    },
+    {
+      "step": "Data Exfiltration",
+      "reasoning": "Sensitive data was accessed and potentially exfiltrated from S3 buckets.",
+      "output_summary": "Data exfiltration occurred."
+    },
+    {
+      "step": "Impact",
+      "reasoning": "Data was encrypted, backups were deleted, and a ransom note was sent via email.",
+      "output_summary": "Significant impact on data integrity and availability."
+    }
+  ]
+}
